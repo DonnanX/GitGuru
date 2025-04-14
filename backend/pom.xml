@@ -14,9 +14,7 @@
     <modules>
         <module>git-guru-common</module>
         <module>git-guru-service</module>
-        <module>git-guru-gateway</module>
         <module>git-guru-auth</module>
-        <module>git-guru-service/git-guru-notice</module>
     </modules>
 
 
@@ -26,9 +24,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>21</java.version>
         <spring-boot.version>3.2.2</spring-boot.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
-        <spring-cloud-alibaba.version>2023.0.1.2</spring-cloud-alibaba.version>
-        <dubbo.version>3.2.10</dubbo.version>
     </properties>
 
     <parent>
@@ -45,22 +40,6 @@
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>rocketmq-client</artifactId>
                 <version>5.3.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-                <version>${spring-cloud-alibaba.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
 
             <dependency>
@@ -186,45 +165,7 @@
 
             <dependency>
                 <groupId>com.donnan</groupId>
-                <artifactId>git-guru-box</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-inventory</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-goods-interface</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-goods</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-pay</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-order</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.donnan</groupId>
                 <artifactId>git-guru-user</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.donnan</groupId>
-                <artifactId>git-guru-trade</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -250,17 +191,6 @@
                 <groupId>com.donnan</groupId>
                 <artifactId>git-guru-promethues</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-spring-boot-starter</artifactId>
-                <version>${dubbo.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-registry-nacos</artifactId>
-                <version>${dubbo.version}</version>
             </dependency>
 
             <dependency>

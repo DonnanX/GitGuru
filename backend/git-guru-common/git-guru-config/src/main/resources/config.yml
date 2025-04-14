@@ -1,9 +1,0 @@
-spring:
-  cloud:
-    nacos:
-      discovery:
-        server-addr: ${git.guru.nacos.server.url}
-      config:
-        server-addr: ${git.guru.nacos.server.url}
-        file-extension: properties
-        name: ${spring.application.name}

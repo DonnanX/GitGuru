@@ -3,6 +3,16 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# 忽略包含敏感信息的配置文件
+**/application-dev.yml
+**/application-prod.yml
+**/application-test.yml
+
+# 避免意外提交包含敏感信息的文件
+*.log
+*.properties.local
+*.env
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml

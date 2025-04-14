@@ -16,7 +16,6 @@
         <module>git-guru-api</module>
         <module>git-guru-limiter</module>
         <module>git-guru-cache</module>
-        <module>git-guru-config</module>
         <module>git-guru-datasource</module>
         <module>git-guru-es</module>
         <module>git-guru-job</module>
@@ -24,7 +23,6 @@
         <module>git-guru-sa-token</module>
         <module>git-guru-web</module>
         <module>git-guru-mq</module>
-        <module>git-guru-rpc</module>
     </modules>
 
 

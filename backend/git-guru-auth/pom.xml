@@ -25,22 +25,12 @@
 
         <dependency>
             <groupId>com.donnan</groupId>
-            <artifactId>git-guru-config</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.donnan</groupId>
             <artifactId>git-guru-web</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.donnan</groupId>
             <artifactId>git-guru-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.donnan</groupId>
-            <artifactId>git-guru-rpc</artifactId>
         </dependency>
 
         <dependency>
