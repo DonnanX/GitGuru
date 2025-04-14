@@ -13,6 +13,7 @@
         <option value="$PROJECT_DIR$/git-guru-common/git-guru-config/pom.xml" />
         <option value="$PROJECT_DIR$/git-guru-common/git-guru-rpc/pom.xml" />
         <option value="$PROJECT_DIR$/git-guru-gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/git-guru-service/git-guru-user/pom.xml" />
         <option value="$PROJECT_DIR$/guru-model/pom.xml" />
         <option value="$PROJECT_DIR$/guru-test/pom.xml" />
         <option value="$PROJECT_DIR$/guru-util/pom.xml" />
