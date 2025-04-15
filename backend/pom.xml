@@ -14,7 +14,6 @@
     <modules>
         <module>git-guru-common</module>
         <module>git-guru-service</module>
-        <module>git-guru-auth</module>
     </modules>
 
 
@@ -23,7 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>21</java.version>
-        <spring-boot.version>3.2.2</spring-boot.version>
+        <spring-boot.version>3.3.4</spring-boot.version>
     </properties>
 
     <parent>
