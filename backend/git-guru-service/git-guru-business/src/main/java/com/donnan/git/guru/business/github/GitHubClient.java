@@ -1,6 +1,7 @@
 package com.donnan.git.guru.business.github;
 
 import com.alibaba.fastjson.JSON;
+import com.donnan.git.guru.business.entity.github.reop.dto.GitHubRepoDto;
 import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserDto;
 import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserInfoDto;
 import lombok.Data;
@@ -155,6 +156,26 @@ public class GitHubClient {
             }
 
             return JSON.parseObject(json, GitHubUserInfoDto.class);
+        } catch (IOException e) {
+            log.error("请求GitHub API异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 根据用户名获取GitHub用户的所有仓库
+     * @param userName 用户名
+     * @return 用户的所有仓库列表
+     */
+    public List<GitHubRepoDto> getUserRepos(String userName) {
+        try {
+            String json = getGitHubResource("https://api.github.com" + "/users/" + userName + "/repos?type=all&sort=updated");
+
+            if (json == null || StringUtils.isBlank(json)) {
+                return null;
+            }
+
+            return JSON.parseArray(json, GitHubRepoDto.class);
         } catch (IOException e) {
             log.error("请求GitHub API异常: {}", e.getMessage());
             return null;
