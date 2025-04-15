@@ -8,7 +8,9 @@ spring:
       api-key: ${AI_DASHSCOPE_API_KEY}
       chat:
         options:
-          model: deepseek-r1
+          model: deepseek-v3
+
+
 
 server:
   port: 8083
