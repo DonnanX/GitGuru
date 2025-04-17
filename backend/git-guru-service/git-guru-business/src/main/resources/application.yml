@@ -1,8 +1,8 @@
 spring:
   application:
-    name: @application.name@
+    name: git-guru
   config:
-    import: classpath:base.yml,classpath:datasource.yml,classpath:cache.yml
+    import: classpath:base.yml
   ai:
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY}
@@ -14,4 +14,18 @@ spring:
 
 server:
   port: 8083
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor: debug
+    com.alibaba.cloud.ai: debug
+    com.donnan.git.guru.business: debug
+github:
+  client:
+    token: ${GITHUB_TOKEN}
+    user:
+      max:
+        num: 9930000
+    thread:
+      num: 10
+
 

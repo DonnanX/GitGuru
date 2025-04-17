@@ -28,20 +28,20 @@
             <artifactId>git-guru-base</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.donnan</groupId>
-            <artifactId>git-guru-sa-token</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.donnan</groupId>-->
+<!--            <artifactId>git-guru-sa-token</artifactId>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>com.donnan</groupId>
-            <artifactId>git-guru-lock</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.donnan</groupId>-->
+<!--            <artifactId>git-guru-lock</artifactId>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>com.donnan</groupId>
-            <artifactId>git-guru-api</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.donnan</groupId>-->
+<!--            <artifactId>git-guru-api</artifactId>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>com.donnan</groupId>
@@ -96,8 +96,8 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>1.4.200</version>
-            <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-mate-annotation</artifactId>

@@ -18,6 +18,7 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.*;
@@ -35,7 +36,7 @@ public class GitHubClient {
 
     // 最大的用户数
     @Value("${github.client.user.max.num}")
-    private int userMaxNum = 9930000;
+    private int userMaxNum;
 
     // 访问github，加速token
     @Value("${github.client.token}")
@@ -45,13 +46,14 @@ public class GitHubClient {
     @Value("${github.client.thread.num}")
     private int threadNum;
 
-    private final CloseableHttpClient httpClient;
+    private CloseableHttpClient httpClient;
 
-    private final ExecutorService executor;
+    private ExecutorService executor;
 
     private Map<String, Integer> gitHubToken;
 
-    public GitHubClient() {
+    @PostConstruct
+    public void init() {
         // 创建连接池管理器
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
         // 设置最大连接数
