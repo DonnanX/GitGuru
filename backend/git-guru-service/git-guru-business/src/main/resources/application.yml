@@ -1,8 +1,8 @@
 spring:
   application:
-    name: git-guru
+    name: git-guru-business
   config:
-    import: classpath:base.yml
+    import: classpath:base.yml,classpath:cache.yml
   ai:
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY}

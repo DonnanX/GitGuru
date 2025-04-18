@@ -33,10 +33,10 @@
 <!--            <artifactId>git-guru-sa-token</artifactId>-->
 <!--        </dependency>-->
 
-<!--        <dependency>-->
-<!--            <groupId>com.donnan</groupId>-->
-<!--            <artifactId>git-guru-lock</artifactId>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.donnan</groupId>
+            <artifactId>git-guru-lock</artifactId>
+        </dependency>
 
 <!--        <dependency>-->
 <!--            <groupId>com.donnan</groupId>-->
@@ -115,6 +115,7 @@
             <artifactId>spring-ai-alibaba-starter</artifactId>
             <version>1.0.0-M5.1</version>
         </dependency>
+
 
     </dependencies>
 

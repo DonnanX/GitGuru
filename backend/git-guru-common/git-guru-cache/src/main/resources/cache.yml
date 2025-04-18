@@ -1,9 +1,9 @@
 spring:
   data:
     redis:
-      host: ${git.guru.redis.url}
-      port: ${git.guru.redis.port}
-      password: ${git.guru.redis.password}
+      host: ${REDIS_URL}
+      port: 6379
+      password: ${REDIS_PASSWORD}
       ssl:
         enabled: true
   redis:
@@ -15,10 +15,10 @@ spring:
           timeout: 3000
           retryAttempts: 3
           retryInterval: 1500
-          password: ${nft.turbo.redis.password}
+          password: ${REDIS_PASSWORD}
           subscriptionsPerConnection: 5
           clientName: null
-          address: "redis://${nft.turbo.redis.url}:${nft.turbo.redis.port}"
+          address: "redis://${REDIS_URL}:6379"
           subscriptionConnectionMinimumIdleSize: 1
           subscriptionConnectionPoolSize: 50
           connectionMinimumIdleSize: 24
