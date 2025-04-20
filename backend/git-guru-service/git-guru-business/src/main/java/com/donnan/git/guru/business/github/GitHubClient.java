@@ -1,9 +1,10 @@
 package com.donnan.git.guru.business.github;
 
 import com.alibaba.fastjson.JSON;
-import com.donnan.git.guru.business.entity.github.reop.dto.GitHubRepoDto;
-import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserDto;
-import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserInfoDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubUserInfoDto;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -178,6 +179,21 @@ public class GitHubClient {
             }
 
             return JSON.parseArray(json, GitHubRepoDto.class);
+        } catch (IOException e) {
+            log.error("请求GitHub API异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public List<GitHubEventDto> getUserEvents(String userName) {
+        try {
+            String json = getGitHubResource("https://api.github.com" + "/users/" + userName + "/events");
+
+            if (json == null || StringUtils.isBlank(json)) {
+                return null;
+            }
+
+            return JSON.parseArray(json, GitHubEventDto.class);
         } catch (IOException e) {
             log.error("请求GitHub API异常: {}", e.getMessage());
             return null;

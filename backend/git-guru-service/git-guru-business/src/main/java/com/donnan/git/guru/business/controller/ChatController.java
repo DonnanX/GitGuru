@@ -38,19 +38,13 @@ public class ChatController {
      */
     @PostMapping(value = "/chat")
     public String chat(@RequestBody ChatRequest request) {
-        Assert.notNull(request.getPrompt(), "Prompt cannot be null");
-        Assert.notNull(request.getUserId(), "UserID cannot be null");
+        Assert.notNull(request.getPrompt(), "Prompt 不能为空");
+        Assert.notNull(request.getUserId(), "UserID 不能为空");
 
-        if (StringUtils.isBlank(request.getSessionId())) {
-            request.setSessionId(UUID.randomUUID().toString());
-            ChatSession chatSession = new ChatSession()
-                    .setSessionId(request.getSessionId())
-                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
-            chatSessionService.saveSession(chatSession, request.getUserId());
-        }
+        setSessionId(request);
         String finalSessionId = request.getSessionId();
         return chatClient.prompt()
-                .user(p -> p.text(request.getPrompt()))
+                .user(request.getPrompt())
                 .advisors(advisorSpec -> advisorSpec
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, finalSessionId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
@@ -66,18 +60,10 @@ public class ChatController {
         Assert.notNull(request.getPrompt(), "Prompt cannot be null");
         Assert.notNull(request.getUserId(), "UserID cannot be null");
 
-        if (StringUtils.isBlank(request.getSessionId())) {
-            request.setSessionId(UUID.randomUUID().toString());
-            ChatSession chatSession = new ChatSession()
-                    .setSessionId(request.getSessionId())
-                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
-            chatSessionService.saveSession(chatSession, request.getUserId());
-        }
-
+        setSessionId(request);
         String finalSessionId = request.getSessionId();
-
         return chatClient.prompt()
-                .user(p -> p.text(request.getPrompt()))
+                .user(request.getPrompt())
                 .advisors(advisorSpec -> advisorSpec
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, finalSessionId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
@@ -85,5 +71,14 @@ public class ChatController {
                 .content();
     }
 
+    private void setSessionId(ChatRequest request) {
+        if (StringUtils.isBlank(request.getSessionId())) {
+            request.setSessionId(UUID.randomUUID().toString());
+            ChatSession chatSession = new ChatSession()
+                    .setSessionId(request.getSessionId())
+                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
+            chatSessionService.saveSession(chatSession, request.getUserId());
+        }
+    }
 
 }

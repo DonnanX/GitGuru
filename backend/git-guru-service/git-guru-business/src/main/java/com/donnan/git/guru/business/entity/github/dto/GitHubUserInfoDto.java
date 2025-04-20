@@ -1,22 +1,12 @@
-package com.donnan.git.guru.business.entity.github.user.pojo;
+package com.donnan.git.guru.business.entity.github.dto;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
 
 import java.util.Date;
 
-@Getter
-@Setter
-@ToString
 @Data
-@TableName("github_user")
-public class GitHubUser {
+public class GitHubUserInfoDto {
     private String login;
-    @TableId(value = "id")
     private Integer id;
     private String nodeId;
     private String avatarUrl;
@@ -35,10 +25,17 @@ public class GitHubUser {
     private String type;
     private String userViewType;
     private boolean siteAdmin;
-    //
-    private Integer score;
-    private String grade;
+    private String name;
+    private String company;
+    private String blog;
+    private String location;
+    private String email;
+    private String bio;
+    private String twitterUsername;
+    private Integer publicRepos;
+    private Integer publicGists;
+    private Integer followers;
+    private Integer following;
     private Date createdAt;
     private Date updatedAt;
-
 }

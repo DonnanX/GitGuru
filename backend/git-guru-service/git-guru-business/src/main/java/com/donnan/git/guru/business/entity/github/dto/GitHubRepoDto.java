@@ -1,4 +1,4 @@
-package com.donnan.git.guru.business.entity.github.reop.dto;
+package com.donnan.git.guru.business.entity.github.dto;
 
 import lombok.Data;
 
