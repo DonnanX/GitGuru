@@ -5,7 +5,7 @@ package com.donnan.git.guru.business.constant;
  */
 public class GitHubConstant {
 
-    public static final int GITHUB_USER_RANDOM_NUMBER = 50;
+    public static final int GITHUB_USER_RANDOM_NUMBER = 10;
 
     public static final String GITHUB_EVENT_PUSH = "PushEvent";
     public static final String GITHUB_EVENT_PULL_REQUEST = "PullRequestEvent";

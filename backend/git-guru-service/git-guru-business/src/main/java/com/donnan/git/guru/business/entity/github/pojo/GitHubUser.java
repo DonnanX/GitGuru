@@ -36,7 +36,9 @@ public class GitHubUser {
 
     // 通过计算得到
     private String topic;
-    private Integer score;
+    private Double totalScore;
+    private Double userScore;
+    private Double repoScore;
     private Integer issues;
     private Integer commits;
     private Integer prs;

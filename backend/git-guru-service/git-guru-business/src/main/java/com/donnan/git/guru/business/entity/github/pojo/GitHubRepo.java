@@ -19,25 +19,21 @@ import java.util.Date;
 @TableName("github_repo")
 public class GitHubRepo {
     @TableId(value = "id")
-    private int id;
+    private Integer id;
     private String name;
-    private String full_name;
-    private String html_url;
+    private String fullName;
+    private String htmlUrl;
     private String description;
     private Date createdAt;
     private Date updatedAt;
     private Date pushedAt;
     private int size;
-    private int stargazers_count;
-    private int watchers_count;
+    private int stargazersCount;
+    private int watchersCount;
     private String language;
-    private int forks_count;
-    private int open_issues_count;
-    private String[] topics;
-    private int forks;
-    private int open_issues;
-    private int watchers;
+    private int forksCount;
+    private int openIssuesCount;
+    private String topics;
 
-    private  String owner_login;
-
+    private String ownerLogin;
 }

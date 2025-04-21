@@ -5,6 +5,7 @@ import com.donnan.git.guru.business.config.RedisChatMemory;
 import com.donnan.git.guru.business.entity.llm.chat.pojo.ChatSession;
 import com.donnan.git.guru.business.param.ChatRequest;
 import com.donnan.git.guru.business.service.ChatSessionService;
+import com.donnan.git.guru.business.service.GitHubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +33,12 @@ public class ChatController {
     private final ChatClient chatClient;
     private final RedisChatMemory redisChatMemory;
     private final ChatSessionService chatSessionService;
+    private final GitHubService gitHubService;
+
+    @PostMapping("/add")
+    public void add() {
+        gitHubService.fetchGithubUserDataPeriodically();
+    }
 
     /**
      * 返回AI聊天响应

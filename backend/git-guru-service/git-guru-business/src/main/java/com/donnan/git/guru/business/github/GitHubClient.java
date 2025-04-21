@@ -104,7 +104,7 @@ public class GitHubClient {
             for (int i = 0; i < pageCount; i++) {
                 // 获取随机起点
                 int randomStart = random.nextInt(this.userMaxNum);
-                String url = "https://api.github.com" + "/users?repos>0&since=" + randomStart + "&per_page=" + pageSize;
+                String url = "https://api.github.com" + "/users?repos%3E0&since=" + randomStart + "&per_page=" + pageSize;
 
                 final String pageUrl = url;  // 用于lambda表达式的final变量
                 Future<List<GitHubUserDto>> future = executor.submit(() -> {
