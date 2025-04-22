@@ -231,7 +231,7 @@ public class GitHubClient {
 
         HttpGet request = new HttpGet(resourcePath);
         request.setHeader("User-Agent", "Mozilla/5.0");
-        request.setHeader("Authorization", selectedToken);
+        request.setHeader("Authorization", "token " + selectedToken);
         request.setHeader("Accept", "application/vnd.github.v3+json");
 
         try (CloseableHttpResponse response = httpClient.execute(request)) {

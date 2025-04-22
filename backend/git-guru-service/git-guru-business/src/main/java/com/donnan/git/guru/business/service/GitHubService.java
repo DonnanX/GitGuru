@@ -5,5 +5,8 @@ package com.donnan.git.guru.business.service;
  */
 public interface GitHubService {
 
+
     void fetchGithubUserDataPeriodically();
+
+    void addGitHubUserByLogin(String login);
 }

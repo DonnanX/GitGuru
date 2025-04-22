@@ -13,6 +13,7 @@ import com.donnan.git.guru.business.mapper.GitHubUserMapper;
 import com.donnan.git.guru.business.service.GitHubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -118,6 +119,65 @@ public class GitHubServiceImpl implements GitHubService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addGitHubUserByLogin(String login) {
+        if (login == null || login.trim().isEmpty()) {
+            log.error("GitHub用户名不能为空");
+            return;
+        }
+
+        try {
+            log.info("开始添加GitHub用户: {}", login);
+
+            // 获取用户详细信息
+            GitHubUserInfoDto userInfo = gitHubClient.getUserInfo(login);
+            if (userInfo == null) {
+                log.warn("无法获取用户 {} 的详细信息", login);
+                return;
+            }
+
+            // 检查用户是否已存在
+            if (gitHubUserMapper.selectById(userInfo.getId()) != null) {
+                log.info("用户 {} 已存在，跳过处理", login);
+                return;
+            }
+
+            // 转换用户数据并处理
+            GitHubUser gitHubUser = convertToGitHubUser(null, userInfo);
+
+            // 获取用户事件并计算相关指标
+            List<GitHubEventDto> events = gitHubClient.getUserEvents(login);
+            processUserEvents(gitHubUser, events);
+
+            // 获取用户仓库并处理
+            List<GitHubRepo> userRepoList = new ArrayList<>();
+            List<GitHubRepoDto> userRepos = gitHubClient.getUserRepos(login);
+            if (userRepos != null && !userRepos.isEmpty()) {
+                userRepoList = processUserRepos(userRepos, login);
+            } else {
+                log.warn("用户 {} 没有可用仓库", login);
+            }
+
+            // 计算用户评分
+            calculateUserScores(gitHubUser, userRepoList);
+
+            // 保存用户数据
+            gitHubUserMapper.insert(gitHubUser);
+
+            // 保存仓库数据(只有在有仓库时才执行)
+            if (!userRepoList.isEmpty()) {
+                for (GitHubRepo repo : userRepoList) {
+                    gitHubRepoMapper.insert(repo);
+                }
+            }
+
+            log.info("成功添加用户 {} 的数据", login);
+        } catch (Exception e) {
+            log.error("添加用户 {} 数据时发生错误: {}", login, e.getMessage(), e);
+            throw new RuntimeException("添加GitHub用户失败: " + e.getMessage(), e);
+        }
+    }
 
 
     /**
@@ -177,14 +237,23 @@ public class GitHubServiceImpl implements GitHubService {
     private List<GitHubRepo> processUserRepos(List<GitHubRepoDto> reposDtos, String userLogin) {
         List<GitHubRepo> repos = new ArrayList<>();
         for (GitHubRepoDto repoDto : reposDtos) {
+            if (!StringUtils.equals(userLogin, repoDto.getOwner().getLogin())) {
+                continue;
+            }
             GitHubRepo repo = new GitHubRepo();
             BeanUtils.copyProperties(repoDto, repo);
+            repo.setStargazersCount(repoDto.getStargazers_count());
+            repo.setForksCount(repoDto.getForks_count());
+            repo.setWatchersCount(repoDto.getWatchers_count());
+            repo.setOpenIssuesCount(repoDto.getOpen_issues_count());
+            repo.setFullName(repoDto.getFull_name());
+            repo.setHtmlUrl(repoDto.getHtml_url());
             StringBuilder sb = new StringBuilder();
             for (String topic : repoDto.getTopics()) {
                 sb.append(topic).append(",");
             }
             repo.setTopics(sb.toString());
-            repo.setOwnerLogin(userLogin); // 确保设置所有者信息
+            repo.setOwnerLogin(repoDto.getOwner().getLogin()); // 确保设置所有者信息
             repos.add(repo);
         }
         return repos;
@@ -214,9 +283,14 @@ public class GitHubServiceImpl implements GitHubService {
      */
     private GitHubUser convertToGitHubUser(GitHubUserDto userDto, GitHubUserInfoDto userInfo) {
         GitHubUser gitHubUser = new GitHubUser();
-        BeanUtils.copyProperties(userInfo, gitHubUser);
-        // 确保优先使用userDto中的字段，因为userInfo可能缺少某些字段
-        BeanUtils.copyProperties(userDto, gitHubUser, "id", "login");
+        if (userDto != null) {
+            BeanUtils.copyProperties(userDto, gitHubUser);
+        }
+        if (userInfo != null) {
+            BeanUtils.copyProperties(userInfo, gitHubUser);
+        }
+
+
 
         // 初始化计数字段，避免空指针异常
         gitHubUser.setCommits(0);

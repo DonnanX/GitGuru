@@ -15,6 +15,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
@@ -36,8 +37,8 @@ public class ChatController {
     private final GitHubService gitHubService;
 
     @PostMapping("/add")
-    public void add() {
-        gitHubService.fetchGithubUserDataPeriodically();
+    public void add(@RequestBody Map map) {
+        gitHubService.addGitHubUserByLogin(map.get("login").toString());
     }
 
     /**
