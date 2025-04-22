@@ -24,11 +24,6 @@
             <artifactId>git-guru-base</artifactId>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>com.donnan</groupId>-->
-<!--            <artifactId>git-guru-sa-token</artifactId>-->
-<!--        </dependency>-->
-
         <dependency>
             <groupId>com.donnan</groupId>
             <artifactId>git-guru-cache</artifactId>

@@ -1,9 +1,10 @@
 package com.donnan.git.guru.business.github;
 
 import com.alibaba.fastjson.JSON;
-import com.donnan.git.guru.business.entity.github.reop.dto.GitHubRepoDto;
-import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserDto;
-import com.donnan.git.guru.business.entity.github.user.dto.GitHubUserInfoDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
+import com.donnan.git.guru.business.entity.github.dto.GitHubUserInfoDto;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -103,7 +104,7 @@ public class GitHubClient {
             for (int i = 0; i < pageCount; i++) {
                 // 获取随机起点
                 int randomStart = random.nextInt(this.userMaxNum);
-                String url = "https://api.github.com" + "/users?repos>0&since=" + randomStart + "&per_page=" + pageSize;
+                String url = "https://api.github.com" + "/users?repos%3E0&since=" + randomStart + "&per_page=" + pageSize;
 
                 final String pageUrl = url;  // 用于lambda表达式的final变量
                 Future<List<GitHubUserDto>> future = executor.submit(() -> {
@@ -184,6 +185,21 @@ public class GitHubClient {
         }
     }
 
+    public List<GitHubEventDto> getUserEvents(String userName) {
+        try {
+            String json = getGitHubResource("https://api.github.com" + "/users/" + userName + "/events");
+
+            if (json == null || StringUtils.isBlank(json)) {
+                return null;
+            }
+
+            return JSON.parseArray(json, GitHubEventDto.class);
+        } catch (IOException e) {
+            log.error("请求GitHub API异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * 通用的GitHub API资源获取方法
      * @param resourcePath API资源路径
@@ -215,7 +231,7 @@ public class GitHubClient {
 
         HttpGet request = new HttpGet(resourcePath);
         request.setHeader("User-Agent", "Mozilla/5.0");
-        request.setHeader("Authorization", selectedToken);
+        request.setHeader("Authorization", "token " + selectedToken);
         request.setHeader("Accept", "application/vnd.github.v3+json");
 
         try (CloseableHttpResponse response = httpClient.execute(request)) {

@@ -1,8 +1,13 @@
 spring:
   application:
     name: git-guru-business
+  datasource:
+    url: jdbc:mysql://localhost:3306/gitguru?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   config:
-    import: classpath:base.yml,classpath:cache.yml
+    import: classpath:cache.yml
   ai:
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY}

@@ -5,6 +5,7 @@ import com.donnan.git.guru.business.config.RedisChatMemory;
 import com.donnan.git.guru.business.entity.llm.chat.pojo.ChatSession;
 import com.donnan.git.guru.business.param.ChatRequest;
 import com.donnan.git.guru.business.service.ChatSessionService;
+import com.donnan.git.guru.business.service.GitHubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -14,6 +15,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
@@ -32,25 +34,25 @@ public class ChatController {
     private final ChatClient chatClient;
     private final RedisChatMemory redisChatMemory;
     private final ChatSessionService chatSessionService;
+    private final GitHubService gitHubService;
+
+    @PostMapping("/add")
+    public void add(@RequestBody Map map) {
+        gitHubService.addGitHubUserByLogin(map.get("login").toString());
+    }
 
     /**
      * 返回AI聊天响应
      */
     @PostMapping(value = "/chat")
     public String chat(@RequestBody ChatRequest request) {
-        Assert.notNull(request.getPrompt(), "Prompt cannot be null");
-        Assert.notNull(request.getUserId(), "UserID cannot be null");
+        Assert.notNull(request.getPrompt(), "Prompt 不能为空");
+        Assert.notNull(request.getUserId(), "UserID 不能为空");
 
-        if (StringUtils.isBlank(request.getSessionId())) {
-            request.setSessionId(UUID.randomUUID().toString());
-            ChatSession chatSession = new ChatSession()
-                    .setSessionId(request.getSessionId())
-                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
-            chatSessionService.saveSession(chatSession, request.getUserId());
-        }
+        setSessionId(request);
         String finalSessionId = request.getSessionId();
         return chatClient.prompt()
-                .user(p -> p.text(request.getPrompt()))
+                .user(request.getPrompt())
                 .advisors(advisorSpec -> advisorSpec
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, finalSessionId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
@@ -66,18 +68,10 @@ public class ChatController {
         Assert.notNull(request.getPrompt(), "Prompt cannot be null");
         Assert.notNull(request.getUserId(), "UserID cannot be null");
 
-        if (StringUtils.isBlank(request.getSessionId())) {
-            request.setSessionId(UUID.randomUUID().toString());
-            ChatSession chatSession = new ChatSession()
-                    .setSessionId(request.getSessionId())
-                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
-            chatSessionService.saveSession(chatSession, request.getUserId());
-        }
-
+        setSessionId(request);
         String finalSessionId = request.getSessionId();
-
         return chatClient.prompt()
-                .user(p -> p.text(request.getPrompt()))
+                .user(request.getPrompt())
                 .advisors(advisorSpec -> advisorSpec
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, finalSessionId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
@@ -85,5 +79,14 @@ public class ChatController {
                 .content();
     }
 
+    private void setSessionId(ChatRequest request) {
+        if (StringUtils.isBlank(request.getSessionId())) {
+            request.setSessionId(UUID.randomUUID().toString());
+            ChatSession chatSession = new ChatSession()
+                    .setSessionId(request.getSessionId())
+                    .setSessionName(request.getPrompt().length() >= 15 ? request.getPrompt().substring(0, 15) : request.getPrompt());
+            chatSessionService.saveSession(chatSession, request.getUserId());
+        }
+    }
 
 }

@@ -1,12 +1,13 @@
-git:
-  guru:
-    nacos:
-      server:
-        url: localhost:8848
-    mysql:
-      url: jdbc:mysql://localhost:3306/gitguru
-      username: root
-      password: '123456'
+#git:
+#  guru:
+#    nacos:
+#      server:
+#        url: localhost:8848
+#    mysql:
+#      url: jdbc:mysql://localhost:3306/gitguru?useSSL=false&serverTimezone=UTC
+#      username:
+#      password:
+#      driver-class-name: com.mysql.cj.jdbc.Driver
 #    redis:
 #      url: r-bp1psmwd2i351smkmjpd.redis.rds.aliyuncs.com  # nft.turbo.redis.url - Redis 的地址 #首次启动前务必修改成你自己的
 #      port: 6379  # nft.turbo.redis.port - Redis 的端口号 #首次启动前务必修改成你自己的
