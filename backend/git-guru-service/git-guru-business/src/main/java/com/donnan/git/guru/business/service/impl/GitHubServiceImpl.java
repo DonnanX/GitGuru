@@ -1,5 +1,7 @@
 package com.donnan.git.guru.business.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.donnan.git.guru.business.constant.GitHubConstant;
 import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
@@ -121,10 +123,10 @@ public class GitHubServiceImpl implements GitHubService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addGitHubUserByLogin(String login) {
+    public GitHubUser addGitHubUserByLogin(String login) {
         if (login == null || login.trim().isEmpty()) {
             log.error("GitHub用户名不能为空");
-            return;
+            return null;
         }
 
         try {
@@ -134,13 +136,14 @@ public class GitHubServiceImpl implements GitHubService {
             GitHubUserInfoDto userInfo = gitHubClient.getUserInfo(login);
             if (userInfo == null) {
                 log.warn("无法获取用户 {} 的详细信息", login);
-                return;
+                return null;
             }
 
+            GitHubUser user = gitHubUserMapper.selectById(userInfo.getId());
             // 检查用户是否已存在
-            if (gitHubUserMapper.selectById(userInfo.getId()) != null) {
-                log.info("用户 {} 已存在，跳过处理", login);
-                return;
+            if (user != null) {
+                log.info("用户 {} 已存在", login);
+                return user;
             }
 
             // 转换用户数据并处理
@@ -168,39 +171,119 @@ public class GitHubServiceImpl implements GitHubService {
             // 保存仓库数据(只有在有仓库时才执行)
             if (!userRepoList.isEmpty()) {
                 for (GitHubRepo repo : userRepoList) {
-                    gitHubRepoMapper.insert(repo);
+                    GitHubRepo gitHubRepo = gitHubRepoMapper.selectById(repo.getId());
+                    if (gitHubRepo == null) gitHubRepoMapper.insert(repo);
                 }
             }
 
             log.info("成功添加用户 {} 的数据", login);
+            return gitHubUser;
         } catch (Exception e) {
             log.error("添加用户 {} 数据时发生错误: {}", login, e.getMessage(), e);
             throw new RuntimeException("添加GitHub用户失败: " + e.getMessage(), e);
         }
     }
 
+    @Override
+    public GitHubRepo getGitHubRepoByLoginAndRepoName(String login, String repoName) {
+        // 1. 参数验证改进
+        if (StringUtils.isAnyBlank(login, repoName)) {
+            log.error("GitHub用户名和仓库名称不能为空");
+            return null;
+        }
+
+        // 2. 先查询数据库
+        LambdaQueryWrapper<GitHubRepo> queryWrapper = new QueryWrapper<GitHubRepo>().lambda()
+                .eq(GitHubRepo::getOwnerLogin, login)
+                .eq(GitHubRepo::getName, repoName);
+        GitHubRepo gitHubRepo = gitHubRepoMapper.selectOne(queryWrapper);
+        if (gitHubRepo != null) {
+            log.info("仓库 {} 已存在于数据库中", login + "/" + repoName);
+            return gitHubRepo;
+        }
+
+        // 3. 数据库不存在才调用API
+        GitHubRepoDto repoDto = gitHubClient.getGitHubRepo(login, repoName);
+        if (repoDto == null) {
+            log.warn("无法从GitHub API获取用户 {} 的仓库 {}", login, repoName);
+            return null;
+        }
+
+        GitHubRepo repo = convertToGitHubRepo(repoDto);
+
+        gitHubRepoMapper.insert(repo);
+        log.info("成功添加仓库 {}", login + "/" + repoName);
+
+        return repo;
+    }
+
+    private GitHubRepo convertToGitHubRepo(GitHubRepoDto repoDto) {
+        if (repoDto == null) {
+            return null;
+        }
+
+        GitHubRepo repo = new GitHubRepo();
+
+        // 只复制名称相同的属性
+        BeanUtils.copyProperties(repoDto, repo);
+
+        // 手动设置命名不一致的属性
+        repo.setStargazersCount(repoDto.getStargazers_count());
+        repo.setForksCount(repoDto.getForks_count());
+        repo.setWatchersCount(repoDto.getWatchers_count());
+        repo.setOpenIssuesCount(repoDto.getOpen_issues_count());
+        repo.setFullName(repoDto.getFull_name());
+        repo.setHtmlUrl(repoDto.getHtml_url());
+
+        // 安全地设置owner_login
+        if (repoDto.getOwner() != null) {
+            repo.setOwnerLogin(repoDto.getOwner().getLogin());
+        }
+
+        // 处理topics，避免空指针异常
+        if (repoDto.getTopics() != null && repoDto.getTopics().length > 0) {
+            repo.setTopics(String.join(",", repoDto.getTopics()));
+        }
+
+        return repo;
+    }
+
 
     /**
-     * 批量插入数据到数据库
+     * 批量插入数据到数据库，先检查记录是否已存在
      */
     @Transactional(rollbackFor = Exception.class)
     public void batchInsertData(List<GitHubUser> users, List<GitHubRepo> repos) {
         try {
+            int userInsertCount = 0;
+            int repoInsertCount = 0;
+
             if (!users.isEmpty()) {
                 for (GitHubUser user : users) {
                     gitHubUserMapper.insert(user);
+                    userInsertCount++;
                 }
             }
 
             if (!repos.isEmpty()) {
                 for (GitHubRepo repo : repos) {
-                    gitHubRepoMapper.insert(repo);
+                    // 检查仓库是否已存在
+                    GitHubRepo existingRepo = gitHubRepoMapper.selectById(repo.getId());
+                    if (existingRepo == null) {
+                        gitHubRepoMapper.insert(repo);
+                        repoInsertCount++;
+                    } else {
+                        log.debug("仓库 {} 已存在，跳过插入", repo.getFullName());
+                    }
                 }
             }
-            log.info("批量插入 {} 个用户和 {} 个仓库成功", users.size(), repos.size());
+
+            log.info("批量插入完成: {} 个用户(尝试 {})和 {} 个仓库(尝试 {})",
+                    userInsertCount, users.size(),
+                    repoInsertCount, repos.size());
         } catch (Exception e) {
             log.error("批量插入数据失败: {}", e.getMessage(), e);
-            throw e; // 触发事务回滚
+            throw e;
         }
     }
 
@@ -240,21 +323,8 @@ public class GitHubServiceImpl implements GitHubService {
             if (!StringUtils.equals(userLogin, repoDto.getOwner().getLogin())) {
                 continue;
             }
-            GitHubRepo repo = new GitHubRepo();
-            BeanUtils.copyProperties(repoDto, repo);
-            repo.setStargazersCount(repoDto.getStargazers_count());
-            repo.setForksCount(repoDto.getForks_count());
-            repo.setWatchersCount(repoDto.getWatchers_count());
-            repo.setOpenIssuesCount(repoDto.getOpen_issues_count());
-            repo.setFullName(repoDto.getFull_name());
-            repo.setHtmlUrl(repoDto.getHtml_url());
-            StringBuilder sb = new StringBuilder();
-            for (String topic : repoDto.getTopics()) {
-                sb.append(topic).append(",");
-            }
-            repo.setTopics(sb.toString());
-            repo.setOwnerLogin(repoDto.getOwner().getLogin()); // 确保设置所有者信息
-            repos.add(repo);
+            GitHubRepo gitHubRepo = convertToGitHubRepo(repoDto);
+            repos.add(gitHubRepo);
         }
         return repos;
     }
