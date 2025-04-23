@@ -5,6 +5,7 @@ import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubUserInfoDto;
+import com.donnan.git.guru.business.entity.github.pojo.GitHubRepo;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -185,6 +186,11 @@ public class GitHubClient {
         }
     }
 
+    /**
+     * 根据用户名获取GitHub用户的所有事件
+     * @param userName 用户名
+     * @return 用户的所有事件列表
+     */
     public List<GitHubEventDto> getUserEvents(String userName) {
         try {
             String json = getGitHubResource("https://api.github.com" + "/users/" + userName + "/events");
@@ -194,6 +200,27 @@ public class GitHubClient {
             }
 
             return JSON.parseArray(json, GitHubEventDto.class);
+        } catch (IOException e) {
+            log.error("请求GitHub API异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 根据用户名和仓库名称获取GitHub仓库信息
+     * @param login 用户名
+     * @param repoName 仓库名称
+     * @return 仓库信息JSON字符串
+     */
+    public GitHubRepoDto getGitHubRepo(String login, String repoName) {
+        try {
+            String json = getGitHubResource("https://api.github.com" + "/repos/" + login + "/" + repoName);
+
+            if (json == null || StringUtils.isBlank(json)) {
+                return null;
+            }
+
+            return JSON.parseObject(json, GitHubRepoDto.class);
         } catch (IOException e) {
             log.error("请求GitHub API异常: {}", e.getMessage());
             return null;

@@ -3,9 +3,6 @@ spring:
     redis:
       host: ${REDIS_URL}
       port: 6379
-      password: ${REDIS_PASSWORD}
-      ssl:
-        enabled: true
   redis:
     redisson:
       config: |
@@ -15,7 +12,6 @@ spring:
           timeout: 3000
           retryAttempts: 3
           retryInterval: 1500
-          password: ${REDIS_PASSWORD}
           subscriptionsPerConnection: 5
           clientName: null
           address: "redis://${REDIS_URL}:6379"
