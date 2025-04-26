@@ -1,6 +1,5 @@
 package com.donnan.git.guru.business.llm;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.donnan.git.guru.business.config.RedisChatMemory;
 import com.donnan.git.guru.business.constant.SystemPrompt;
 import com.donnan.git.guru.business.model.AlibabaOpenAiChatModel;

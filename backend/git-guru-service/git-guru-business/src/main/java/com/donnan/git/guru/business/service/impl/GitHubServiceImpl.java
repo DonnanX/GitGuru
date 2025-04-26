@@ -1,8 +1,10 @@
 package com.donnan.git.guru.business.service.impl;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.donnan.git.guru.business.constant.GitHubConstant;
+import com.donnan.git.guru.business.constant.RedisConstant;
 import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
 import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,8 @@ public class GitHubServiceImpl implements GitHubService {
     private final GitHubClient gitHubClient;
     private final GitHubUserMapper gitHubUserMapper;
     private final GitHubRepoMapper gitHubRepoMapper;
+    private final ElasticsearchClient elasticsearchClient;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 定时任务，每天22点执行
@@ -436,6 +441,20 @@ public class GitHubServiceImpl implements GitHubService {
         double prReviewAmountScore = calculateFunction(10, 50, user.getPrReviews());
 
         return followersScore + reposScore + commitAmountScore + prAmountScore + issueAmountScore + prReviewAmountScore;
+    }
+
+    @Override
+    public String[] getGitHubRepoContents(String login, String repoName, String question) {
+        String key = login + "/" + repoName;
+        Boolean isLoaded = stringRedisTemplate.opsForSet().isMember(RedisConstant.GITHUB_REPO_CONTENT_PREFIX, key);
+
+        if (Boolean.FALSE.equals(isLoaded)) {
+            String[] repoDocs = gitHubClient.getRepoDocs(login, repoName);
+        }
+
+
+
+        return new String[0];
     }
 
 }

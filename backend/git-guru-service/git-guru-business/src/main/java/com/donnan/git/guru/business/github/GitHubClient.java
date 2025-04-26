@@ -293,4 +293,8 @@ public class GitHubClient {
             log.info("ExecutorService资源已释放");
         }
     }
+
+    public String[] getRepoDocs(String login, String repoName) {
+
+    }
 }

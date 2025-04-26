@@ -14,4 +14,6 @@ public interface GitHubService {
     GitHubUser addGitHubUserByLogin(String login);
 
     GitHubRepo getGitHubRepoByLoginAndRepoName(String login, String repoName);
+
+    String[] getGitHubRepoContents(String login, String repoName, String question);
 }

@@ -35,4 +35,13 @@ public class GitHubTools {
         return gitHubRepo;
 
     }
+
+    @Tool(description = "获取某个用户的某个仓库的文档信息，可以根据用户的问题来返回相似度高的资料，帮助你回答用户的问题。")
+    public String[] getGitHubRepoContent(@ToolParam(description = "用户昵称") String login, @ToolParam(description = "仓库名称") String repoName, @ToolParam(description = "用户提出的问题") String question) {
+        if (login == null || login.isEmpty() || repoName == null || repoName.isEmpty() || question == null || question.isEmpty()) {
+            return null;
+        }
+        String[] contents = gitHubService.getGitHubRepoContents(login, repoName, question);
+        return contents;
+    }
 }

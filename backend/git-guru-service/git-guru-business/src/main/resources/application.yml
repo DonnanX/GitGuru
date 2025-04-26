@@ -15,7 +15,8 @@ spring:
       chat:
         options:
           model: qwen-max-latest
-
+  elasticsearch:
+    uris: http://localhost:9200
 
 
 server:

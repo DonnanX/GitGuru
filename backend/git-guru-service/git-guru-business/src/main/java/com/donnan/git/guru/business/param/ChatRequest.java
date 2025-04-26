@@ -8,6 +8,6 @@ import lombok.Data;
 @Data
 public class ChatRequest {
     private String prompt;
-    private String sessionId;
+    private String chatId;
     private String userId;
 }
