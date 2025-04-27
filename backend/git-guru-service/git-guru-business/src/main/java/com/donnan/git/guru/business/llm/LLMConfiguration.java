@@ -17,6 +17,9 @@ import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -73,5 +76,21 @@ public class LLMConfiguration {
         Objects.requireNonNull(chatModel);
         observationConvention.ifAvailable(chatModel::setObservationConvention);
         return chatModel;
+    }
+
+    @Bean
+    public MultiQueryExpander multiQueryExpander(OpenAiChatModel model) {
+        return MultiQueryExpander.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .includeOriginal(false) // 不包含原始查询
+                .numberOfQueries(3) // 生成3个查询变体
+                .build();
+    }
+
+    @Bean
+    public RewriteQueryTransformer rewriteQueryTransformer(OpenAiChatModel model) {
+        return RewriteQueryTransformer.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .build();
     }
 }

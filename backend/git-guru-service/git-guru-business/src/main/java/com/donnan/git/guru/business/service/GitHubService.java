@@ -1,7 +1,10 @@
 package com.donnan.git.guru.business.service;
 
+import com.donnan.git.guru.business.entity.github.pojo.ESGitHubRepoContent;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubRepo;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubUser;
+
+import java.util.List;
 
 /**
  * @author Donnan
@@ -15,5 +18,5 @@ public interface GitHubService {
 
     GitHubRepo getGitHubRepoByLoginAndRepoName(String login, String repoName);
 
-    String[] getGitHubRepoContents(String login, String repoName, String question);
+    List<ESGitHubRepoContent> getGitHubRepoContents(String login, String repoName, String question);
 }

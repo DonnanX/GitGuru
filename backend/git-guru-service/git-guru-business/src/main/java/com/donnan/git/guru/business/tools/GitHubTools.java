@@ -1,5 +1,6 @@
 package com.donnan.git.guru.business.tools;
 
+import com.donnan.git.guru.business.entity.github.pojo.ESGitHubRepoContent;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubRepo;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubUser;
 import com.donnan.git.guru.business.service.GitHubService;
@@ -7,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * @author Donnan
@@ -22,8 +25,7 @@ public class GitHubTools {
         if (login == null || login.isEmpty()) {
             return null;
         }
-        GitHubUser user = gitHubService.addGitHubUserByLogin(login);
-        return user;
+        return gitHubService.addGitHubUserByLogin(login);
     }
 
     @Tool(description = "获取某个用户的某个GitHub仓库的基础信息，若返回为空，则是因为该仓库不存在，请注意：必须是指定用户的指定仓库名称，因为GitHub上可能存在多个同名仓库，若用户没有这样做，请提醒他。")
@@ -31,17 +33,15 @@ public class GitHubTools {
         if (login == null || login.isEmpty() || repoName == null || repoName.isEmpty()) {
             return null;
         }
-        GitHubRepo gitHubRepo = gitHubService.getGitHubRepoByLoginAndRepoName(login, repoName);
-        return gitHubRepo;
+        return gitHubService.getGitHubRepoByLoginAndRepoName(login, repoName);
 
     }
 
     @Tool(description = "获取某个用户的某个仓库的文档信息，可以根据用户的问题来返回相似度高的资料，帮助你回答用户的问题。")
-    public String[] getGitHubRepoContent(@ToolParam(description = "用户昵称") String login, @ToolParam(description = "仓库名称") String repoName, @ToolParam(description = "用户提出的问题") String question) {
-        if (login == null || login.isEmpty() || repoName == null || repoName.isEmpty() || question == null || question.isEmpty()) {
+    public List<ESGitHubRepoContent> getGitHubRepoContent(@ToolParam(description = "用户昵称") String login, @ToolParam(description = "仓库名称", required = false) String repoName, @ToolParam(description = "用户提出的问题") String question) {
+        if (login == null || login.isEmpty() || question == null || question.isEmpty()) {
             return null;
         }
-        String[] contents = gitHubService.getGitHubRepoContents(login, repoName, question);
-        return contents;
+        return gitHubService.getGitHubRepoContents(login, repoName, question);
     }
 }

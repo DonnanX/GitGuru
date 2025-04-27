@@ -12,5 +12,4 @@ public class ESGitHubRepoContent {
     private String repo_name;
     private String content;
     private float[] content_vector;
-    private String type;
 }

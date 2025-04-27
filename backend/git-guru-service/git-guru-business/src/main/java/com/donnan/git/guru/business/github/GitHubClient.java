@@ -1,10 +1,7 @@
 package com.donnan.git.guru.business.github;
 
 import com.alibaba.fastjson.JSON;
-import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubUserInfoDto;
+import com.donnan.git.guru.business.entity.github.dto.*;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubRepo;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * @author Donnan
@@ -227,6 +225,145 @@ public class GitHubClient {
         }
     }
 
+    public List<GitHubRepoContentDto> getRepoDocsByUser(String login) {
+        List<GitHubRepoDto> repos = getUserRepos(login);
+        if (repos == null || repos.isEmpty()) {
+            log.warn("用户 {} 没有仓库", login);
+            return null;
+        }
+        repos = repos.stream().sorted((o1, o2) -> o1.getStargazers_count() - o2.getStargazers_count() > 0 ? -1 : 1).limit(5).toList();
+        List<GitHubRepoContentDto> repoContents = new ArrayList<>();
+        for (GitHubRepoDto repo : repos) {
+            String repoName = repo.getName();
+            String[] docs = getRepoDocs(login, repoName);
+            if (docs != null && docs.length > 0) {
+                GitHubRepoContentDto contentDto = new GitHubRepoContentDto();
+                contentDto.setOwnerLogin(login);
+                contentDto.setRepoName(repoName);
+                contentDto.setContent(docs);
+                repoContents.add(contentDto);
+            } else {
+                log.warn("用户 {} 的仓库 {} 没有文档信息", login, repoName);
+            }
+        }
+
+        if (repoContents.isEmpty()) {
+            log.warn("用户 {} 的仓库没有文档信息", login);
+            return null;
+        }
+
+        return repoContents;
+    }
+
+    // 对外暴露的简单方法
+    public String[] getRepoDocs(String login, String repoName) {
+        return getRepoDocs(login, repoName, null, 0);
+    }
+
+    /**
+     * 获取仓库中的文档内容
+     * @param login 用户名
+     * @param repoName 仓库名称
+     * @param path 路径，初始调用时传入null或空字符串
+     * @param depth 当前递归深度
+     * @return 文档内容数组
+     */
+    public String[] getRepoDocs(String login, String repoName, String path, int depth) {
+        // 参数校验
+        if (StringUtils.isAnyBlank(login, repoName)) {
+            log.error("获取仓库文档失败：用户名和仓库名不能为空");
+            return new String[0];
+        }
+
+        // 递归深度控制
+        final int MAX_DEPTH = 3;
+        if (depth > MAX_DEPTH) {
+            log.warn("达到最大递归深度({})，停止获取更深层级文档", MAX_DEPTH);
+            return new String[0];
+        }
+
+        try {
+            // 构建请求URL
+            String url = "https://api.github.com/repos/" + login + "/" + repoName + "/contents";
+            if (StringUtils.isNotBlank(path)) {
+                url += "/" + path;
+            }
+
+            String json = getGitHubResource(url);
+            if (StringUtils.isBlank(json)) {
+                return new String[0];
+            }
+
+            List<GitHubFileDto> repoList = JSON.parseArray(json, GitHubFileDto.class);
+            if (repoList == null || repoList.isEmpty()) {
+                return new String[0];
+            }
+
+            List<String> docs = new ArrayList<>();
+            List<Future<String[]>> dirFutures = new ArrayList<>();
+
+            // 并行处理目录
+            for (GitHubFileDto repo : repoList) {
+                if ("file".equals(repo.getType()) && isDocFile(repo.getName())) {
+                    // 处理文档文件
+                    String fileContent = getFileContent(repo.getUrl());
+                    if (fileContent != null) {
+                        docs.add(fileContent);
+                    }
+                } else if ("dir".equals(repo.getType()) && (path == null || repo.getPath().contains("docs"))) {
+                    // 并行处理子目录
+                    final String subPath = repo.getPath();
+                    Future<String[]> future = executor.submit(() ->
+                            getRepoDocs(login, repoName, subPath, depth + 1)
+                    );
+                    dirFutures.add(future);
+                }
+            }
+
+            // 收集子目录的结果
+            for (Future<String[]> future : dirFutures) {
+                try {
+                    String[] subDocs = future.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                    if (subDocs != null && subDocs.length > 0) {
+                        Collections.addAll(docs, subDocs);
+                    }
+                } catch (Exception e) {
+                    log.error("获取子目录文档失败: {}", e.getMessage());
+                }
+            }
+
+            return docs.toArray(new String[0]);
+        } catch (IOException e) {
+            log.error("请求GitHub API获取仓库文档异常: {}, 仓库: {}/{}", e.getMessage(), login, repoName);
+            return new String[0];
+        }
+    }
+
+    /**
+     * 判断是否为文档文件
+     */
+    private boolean isDocFile(String fileName) {
+        return fileName.endsWith(".md") || fileName.endsWith(".txt");
+    }
+
+    /**
+     * 获取文件内容
+     */
+    private String getFileContent(String fileUrl) {
+        try {
+            String resource = getGitHubResource(fileUrl);
+            if (resource != null) {
+                GitHubFileDto content = JSON.parseObject(resource, GitHubFileDto.class);
+                if (content != null && content.getContent() != null) {
+                    return new String(Base64.getDecoder().decode(content.getContent()));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取文件内容失败: {}", e.getMessage());
+        }
+        return null;
+    }
+
     /**
      * 通用的GitHub API资源获取方法
      * @param resourcePath API资源路径
@@ -292,9 +429,5 @@ public class GitHubClient {
             executor.shutdown();
             log.info("ExecutorService资源已释放");
         }
-    }
-
-    public String[] getRepoDocs(String login, String repoName) {
-
     }
 }
