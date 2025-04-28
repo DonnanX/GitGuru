@@ -25,7 +25,8 @@ GitHub Chat:
 
 ## 如何使用🛠️
 
-系统变量：
 
 1. 需要提供百炼平台的大模型API-Key。
 2. 需要提供GitHub API的API-Key。
+3. 部署Redis。
+4. 部署ElasticSearch。
