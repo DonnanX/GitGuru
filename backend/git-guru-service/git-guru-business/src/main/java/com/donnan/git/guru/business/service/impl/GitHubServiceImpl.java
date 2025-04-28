@@ -1,12 +1,24 @@
 package com.donnan.git.guru.business.service.impl;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.KnnQuery;
+import co.elastic.clients.elasticsearch._types.KnnSearch;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.BulkResponse;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
+import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.donnan.git.guru.business.constant.GitHubConstant;
-import com.donnan.git.guru.business.entity.github.dto.GitHubEventDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubRepoDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubUserDto;
-import com.donnan.git.guru.business.entity.github.dto.GitHubUserInfoDto;
+import com.donnan.git.guru.business.constant.RedisConstant;
+import com.donnan.git.guru.business.entity.github.dto.*;
+import com.donnan.git.guru.business.entity.github.pojo.ESGitHubRepoContent;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubRepo;
 import com.donnan.git.guru.business.entity.github.pojo.GitHubUser;
 import com.donnan.git.guru.business.github.GitHubClient;
@@ -16,15 +28,25 @@ import com.donnan.git.guru.business.service.GitHubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.rag.Query;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Donnan
@@ -37,6 +59,11 @@ public class GitHubServiceImpl implements GitHubService {
     private final GitHubClient gitHubClient;
     private final GitHubUserMapper gitHubUserMapper;
     private final GitHubRepoMapper gitHubRepoMapper;
+    private final ElasticsearchClient elasticsearchClient;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final DashScopeEmbeddingModel embeddingModel;
+    private final MultiQueryExpander multiQueryExpander;
+    private final RewriteQueryTransformer rewriteQueryTransformer;
 
     /**
      * 定时任务，每天22点执行
@@ -438,4 +465,265 @@ public class GitHubServiceImpl implements GitHubService {
         return followersScore + reposScore + commitAmountScore + prAmountScore + issueAmountScore + prReviewAmountScore;
     }
 
+    @Override
+    public List<ESGitHubRepoContent> getGitHubRepoContents(String login, String repoName, String question) {
+        // 参数验证
+        if (StringUtils.isBlank(login)) {
+            log.error("GitHub用户名不能为空");
+            return null;
+        }
+
+        try {
+            // 构建缓存键
+            String cacheKey = StringUtils.isBlank(repoName) ?
+                    login + "/all" : login + "/" + repoName;
+
+            // 检查是否已加载到ES
+            Boolean isLoaded = stringRedisTemplate.opsForSet()
+                    .isMember(RedisConstant.GITHUB_REPO_CONTENT_PREFIX, cacheKey);
+
+            if (Boolean.FALSE.equals(isLoaded)) {
+                if (StringUtils.isBlank(repoName)) {
+                    // 处理所有仓库
+                    loadAllReposContent(login);
+                } else {
+                    // 处理单个仓库
+                    loadSingleRepoContent(login, repoName);
+                }
+            }
+
+            // 根据问题检索内容
+            return searchRepoContentsByQuestion(login, repoName, question);
+        } catch (Exception e) {
+            log.error("获取仓库内容时出错: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 加载用户所有仓库内容到ES
+     */
+    private void loadAllReposContent(String login) {
+        List<GitHubRepoContentDto> repoDocsByUser = gitHubClient.getRepoDocsByUser(login);
+        if (repoDocsByUser == null || repoDocsByUser.isEmpty()) {
+            log.info("用户 {} 没有可加载的仓库内容", login);
+            return;
+        }
+
+        BulkRequest.Builder br = new BulkRequest.Builder();
+        Set<String> indexedRepos = new HashSet<>();
+
+        for (GitHubRepoContentDto repoDoc : repoDocsByUser) {
+            if (repoDoc.getContent() == null || repoDoc.getContent().length == 0) {
+                continue;
+            }
+
+            processAndIndexContent(br, repoDoc.getContent(), repoDoc.getRepoName(), repoDoc.getOwnerLogin());
+            indexedRepos.add(repoDoc.getOwnerLogin() + "/" + repoDoc.getRepoName());
+        }
+
+        // 执行批量索引
+        executeBulkIndex(br);
+
+        // 更新Redis缓存
+        String[] cacheKeys = indexedRepos.toArray(new String[0]);
+        if (cacheKeys.length > 0) {
+            indexedRepos.add(login + "/all");
+            stringRedisTemplate.opsForSet().add(RedisConstant.GITHUB_REPO_CONTENT_PREFIX,
+                    indexedRepos.toArray(new String[0]));
+        }
+    }
+
+    /**
+     * 加载单个仓库内容到ES
+     */
+    private void loadSingleRepoContent(String login, String repoName) {
+        String[] repoDoc = gitHubClient.getRepoDocs(login, repoName);
+        if (repoDoc == null || repoDoc.length == 0) {
+            log.info("仓库 {}/{} 没有可加载的内容", login, repoName);
+            return;
+        }
+
+        BulkRequest.Builder br = new BulkRequest.Builder();
+        processAndIndexContent(br, repoDoc, repoName, login);
+
+        // 执行批量索引
+        executeBulkIndex(br);
+
+        // 更新Redis缓存
+        stringRedisTemplate.opsForSet().add(RedisConstant.GITHUB_REPO_CONTENT_PREFIX,
+                login + "/" + repoName);
+    }
+
+    /**
+     * 处理文档内容并创建ES索引请求
+     */
+    private void processAndIndexContent(BulkRequest.Builder br, String[] contents,
+                                        String repoName, String ownerLogin) {
+        TokenTextSplitter textSplitter = new TokenTextSplitter();
+        List<Document> documents = new ArrayList<>();
+
+        for (String content : contents) {
+            if (StringUtils.isNotBlank(content)) {
+                documents.add(new Document(content));
+            }
+        }
+
+        // 分割文本
+        List<Document> chunks = textSplitter.split(documents);
+
+        for (Document chunk : chunks) {
+            if (chunk.getText() == null || chunk.getText().isEmpty()) {
+                continue;
+            }
+            ESGitHubRepoContent esContent = new ESGitHubRepoContent();
+            esContent.setContent(chunk.getText());
+            esContent.setRepo_name(repoName);
+            esContent.setOwner_login(ownerLogin);
+            float[] embed = embeddingModel.embed(chunk.getText());
+            esContent.setContent_vector(embed);
+
+            br.operations(op -> op.index(i -> i
+                    .index("github_repo_content")
+                    .document(esContent)
+            ));
+        }
+    }
+
+    /**
+     * 执行批量ES索引操作
+     */
+    private void executeBulkIndex(BulkRequest.Builder br) {
+        try {
+            BulkResponse result = elasticsearchClient.bulk(br.build());
+
+            if (result.errors()) {
+                log.error("ES批量索引出现错误");
+                for (BulkResponseItem item: result.items()) {
+                    if (item.error() != null) {
+                        log.error(item.error().reason());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("ES批量索引异常: {}", e.getMessage(), e);
+            throw new RuntimeException("索引仓库内容失败", e);
+        }
+    }
+
+    /**
+     * 根据问题搜索仓库内容
+     */
+    private List<ESGitHubRepoContent> searchRepoContentsByQuestion(String login, String repoName, String question) {
+        if (StringUtils.isBlank(question)) {
+            log.warn("搜索问题不能为空");
+            return Collections.emptyList();
+        }
+
+        try {
+            // 1. 构建基础过滤查询
+            co.elastic.clients.elasticsearch._types.query_dsl.Query filterQuery = buildOwnerRepoFilterQuery(login, repoName);
+
+            // 2. 构建KNN语义搜索
+            List<KnnSearch> knnQueries = buildKnnQueries(question);
+
+            // 3. 执行搜索
+            SearchResponse<ESGitHubRepoContent> response = elasticsearchClient.search(s -> s
+                            .index("github_repo_content")
+                            .query(filterQuery)
+                            .knn(knnQueries)
+                            .size(10),  // 限制返回条数，提高性能
+                    ESGitHubRepoContent.class);  // 直接指定返回类型
+
+            // 4. 处理结果
+            return extractSearchResults(response);
+        } catch (Exception e) {
+            log.error("执行仓库内容向量搜索失败: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 构建所有者和仓库名称的过滤查询
+     */
+    private co.elastic.clients.elasticsearch._types.query_dsl.Query buildOwnerRepoFilterQuery(String login, String repoName) {
+        co.elastic.clients.elasticsearch._types.query_dsl.Query loginQuery = TermQuery.of(q -> q
+                .field("owner_login")
+                .value(login)
+        )._toQuery();
+
+        if (StringUtils.isNotBlank(repoName)) {
+            co.elastic.clients.elasticsearch._types.query_dsl.Query repoNameQuery = TermQuery.of(q -> q
+                    .field("repo_name")
+                    .value(repoName)
+            )._toQuery();
+
+            return BoolQuery.of(b -> b
+                    .must(loginQuery)
+                    .must(repoNameQuery)
+            )._toQuery();
+        } else {
+            return loginQuery;
+        }
+    }
+
+    /**
+     * 构建KNN查询
+     */
+    private List<KnnSearch> buildKnnQueries(String question) {
+        List<KnnSearch> knnQueries = new ArrayList<>();
+        List<Query> expandedQueries = multiQueryExpander.expand(new Query(question));
+
+        // 限制查询数量，避免过多查询
+        int queryLimit = Math.min(expandedQueries.size(), 3);
+
+        for (int i = 0; i < queryLimit; i++) {
+            Query query = expandedQueries.get(i);
+            String text = rewriteQueryTransformer.transform(query).text();
+
+            // 获取文本嵌入向量
+            float[] embedVector = embeddingModel.embed(text);
+            List<Float> embedList = convertFloatArrayToList(embedVector);
+
+            KnnSearch knnSearch = KnnSearch.of(k -> k
+                    .field("content_vector")
+                    .k(3)
+                    .queryVector(embedList)
+                    .numCandidates(100)  // 减少候选数量，提高性能
+            );
+
+            knnQueries.add(knnSearch);
+        }
+
+        return knnQueries;
+    }
+
+    /**
+     * 将float数组转换为List<Float>
+     */
+    private List<Float> convertFloatArrayToList(float[] array) {
+        List<Float> list = new ArrayList<>(array.length);
+        for (float value : array) {
+            list.add(value);
+        }
+        return list;
+    }
+
+    /**
+     * 从搜索响应中提取结果
+     */
+    private List<ESGitHubRepoContent> extractSearchResults(SearchResponse<ESGitHubRepoContent> response) {
+        if (response == null || response.hits().hits().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ESGitHubRepoContent> results = new ArrayList<>();
+        for (Hit<ESGitHubRepoContent> hit : response.hits().hits()) {
+            if (hit.source() != null) {
+                results.add(hit.source());
+            }
+        }
+
+        return results;
+    }
 }

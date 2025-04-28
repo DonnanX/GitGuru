@@ -1,6 +1,8 @@
 package com.donnan.git.guru.business.llm;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingOptions;
 import com.donnan.git.guru.business.config.RedisChatMemory;
 import com.donnan.git.guru.business.constant.SystemPrompt;
 import com.donnan.git.guru.business.model.AlibabaOpenAiChatModel;
@@ -14,10 +16,14 @@ import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.observation.ChatModelObservationConvention;
 import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -74,5 +80,30 @@ public class LLMConfiguration {
         Objects.requireNonNull(chatModel);
         observationConvention.ifAvailable(chatModel::setObservationConvention);
         return chatModel;
+    }
+
+    @Bean
+    public MultiQueryExpander multiQueryExpander(OpenAiChatModel model) {
+        return MultiQueryExpander.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .includeOriginal(false) // 不包含原始查询
+                .numberOfQueries(3) // 生成3个查询变体
+                .build();
+    }
+
+    @Bean
+    public RewriteQueryTransformer rewriteQueryTransformer(OpenAiChatModel model) {
+        return RewriteQueryTransformer.builder()
+                .chatClientBuilder(ChatClient.builder(model))
+                .build();
+    }
+
+    @Bean
+    public DashScopeEmbeddingModel dashScopeEmbeddingModel(OpenAiChatModel model) {
+        var dashScopeApi = new DashScopeApi(System.getenv("AI_DASHSCOPE_API_KEY"));
+        return new DashScopeEmbeddingModel(dashScopeApi, MetadataMode.EMBED,
+                DashScopeEmbeddingOptions.builder()
+                        .withModel("text-embedding-v3")
+                        .build());
     }
 }

@@ -1,6 +1,5 @@
 package com.donnan.git.guru.business.entity.llm.chat.pojo;
  
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
  
@@ -9,9 +8,9 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class ChatSession {
+public class Chat {
 
-    private String sessionId;
+    private String chatId;
 
-    private String sessionName;
+    private String chatName;
 }
