@@ -3,6 +3,7 @@
 ## 简介🚀
 
 GitGuru是一个关于GitHub的数据应用。
+
 GitGuru存在的价值是让开发者能够更加方便的去了解GitHub的信息。
 
 GitGuru目前提供了以下功能：
