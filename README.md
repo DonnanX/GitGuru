@@ -1,6 +1,6 @@
 # GitGuru🌟
 
-## 简介 🚀
+## 简介🚀
 
 GitGuru是一个关于GitHub的数据应用。GitGuru存在的价值是让开发者能够更加方便的去了解GitHub的信息。
 
@@ -12,7 +12,7 @@ GitGuru目前提供了以下功能：
   - 用户可以了解某个GitHub仓库的基本内容。
 - ...
 
-## 特性 ✨
+## 特性✨
 
 数据加载和技术评估：
 
@@ -22,3 +22,10 @@ GitGuru目前提供了以下功能：
 GitHub Chat:
 
 - 利用Spring AI + Tool Calling + RAG实现的大模型助手。
+
+## 如何使用🛠️
+
+系统变量：
+
+1. 需要提供百炼平台的大模型API-Key。
+2. 需要提供GitHub API的API-Key。
