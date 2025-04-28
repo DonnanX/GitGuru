@@ -719,7 +719,9 @@ public class GitHubServiceImpl implements GitHubService {
 
         List<ESGitHubRepoContent> results = new ArrayList<>();
         for (Hit<ESGitHubRepoContent> hit : response.hits().hits()) {
-            if (hit.source() != null) {
+            ESGitHubRepoContent source = hit.source();
+            if (source != null) {
+                source.setContent_vector(null); // 清除向量数据
                 results.add(hit.source());
             }
         }
