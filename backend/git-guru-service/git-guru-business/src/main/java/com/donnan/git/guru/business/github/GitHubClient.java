@@ -310,7 +310,7 @@ public class GitHubClient {
                     if (fileContent != null) {
                         docs.add(fileContent);
                     }
-                } else if ("dir".equals(repo.getType()) && (path == null || repo.getPath().contains("docs"))) {
+                } else if ("dir".equals(repo.getType()) && repo.getPath().contains("docs")) {
                     // 并行处理子目录
                     final String subPath = repo.getPath();
                     Future<String[]> future = executor.submit(() ->
@@ -355,13 +355,42 @@ public class GitHubClient {
             if (resource != null) {
                 GitHubFileDto content = JSON.parseObject(resource, GitHubFileDto.class);
                 if (content != null && content.getContent() != null) {
-                    return new String(Base64.getDecoder().decode(content.getContent()));
+                    String base64 = base64(content.getContent());
+                    return base64;
                 }
             }
         } catch (Exception e) {
             log.warn("获取文件内容失败: {}", e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * base64解码
+     * @param base64EncodedString
+     * @return
+     */
+    private String base64(String base64EncodedString) {
+        // 清理字符串，移除任何非法Base64字符
+        String cleanedString = base64EncodedString
+                .replace("\n", "")
+                .replace("\r", "")
+                .replace(" ", "");
+
+        try {
+            // 尝试使用标准Base64解码器解码
+            byte[] decodedBytes = Base64.getDecoder().decode(cleanedString);
+            return new String(decodedBytes);
+        } catch (IllegalArgumentException e) {
+            // 如果标准解码器失败，尝试URL安全的解码器
+            try {
+                byte[] decodedBytes = Base64.getUrlDecoder().decode(cleanedString);
+                return new String(decodedBytes);
+            } catch (IllegalArgumentException ex) {
+                ex.printStackTrace();
+                return null;
+            }
+        }
     }
 
     /**

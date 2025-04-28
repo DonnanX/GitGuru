@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -60,7 +61,7 @@ public class GitHubServiceImpl implements GitHubService {
     private final GitHubRepoMapper gitHubRepoMapper;
     private final ElasticsearchClient elasticsearchClient;
     private final StringRedisTemplate stringRedisTemplate;
-    private final OpenAiEmbeddingModel embeddingModel;
+    private final DashScopeEmbeddingModel embeddingModel;
     private final MultiQueryExpander multiQueryExpander;
     private final RewriteQueryTransformer rewriteQueryTransformer;
 
@@ -572,11 +573,14 @@ public class GitHubServiceImpl implements GitHubService {
         List<Document> chunks = textSplitter.split(documents);
 
         for (Document chunk : chunks) {
+            if (chunk.getText() == null || chunk.getText().isEmpty()) {
+                continue;
+            }
             ESGitHubRepoContent esContent = new ESGitHubRepoContent();
             esContent.setContent(chunk.getText());
             esContent.setRepo_name(repoName);
             esContent.setOwner_login(ownerLogin);
-            float[] embed = embeddingModel.embed(Objects.requireNonNull(chunk.getText()));
+            float[] embed = embeddingModel.embed(chunk.getText());
             esContent.setContent_vector(embed);
 
             br.operations(op -> op.index(i -> i
@@ -634,7 +638,7 @@ public class GitHubServiceImpl implements GitHubService {
             // 4. 处理结果
             return extractSearchResults(response);
         } catch (Exception e) {
-            log.error("执行仓库内容语义搜索失败: {}", e.getMessage(), e);
+            log.error("执行仓库内容向量搜索失败: {}", e.getMessage(), e);
             return Collections.emptyList();
         }
     }
@@ -683,7 +687,7 @@ public class GitHubServiceImpl implements GitHubService {
 
             KnnSearch knnSearch = KnnSearch.of(k -> k
                     .field("content_vector")
-                    .k(5)
+                    .k(3)
                     .queryVector(embedList)
                     .numCandidates(100)  // 减少候选数量，提高性能
             );
